@@ -2,6 +2,7 @@
 	<head>
 		<meta charset="utf-8"/>
 		<!--<script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>-->
+		<script src="moment.js"></script>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 		<script src="jquery.csv.js"></script>
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
@@ -9,18 +10,19 @@
 		<link rel="stylesheet" type="text/css" href="css/calcstyle.css">
 		<!--<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>-->
 
-		<title>Heatmaps</title>
+		<title>GT Safe Walk Maps</title>
 	    <style>
 	      /* Always set the map height explicitly to define the size of the div
 	       * element that contains the map. */
 	      #map {
-	        height: 100%;
+	      	width : 100%;
+	        height: 75%;
 	      }
 	      /* Optional: Makes the sample page fill the window. */
 	      html, body {
 	        height: 100%;
-	        margin: 0;
-	        padding: 0;
+	        /*margin: 0;*/
+	        /*padding: 0;*/
 	      }
 	      #floating-panel {
 	        position: absolute;
@@ -47,32 +49,84 @@
 	    </style>
 	</head>
 	<body>
-	    <div id="floating-panel">
+		<div>
+			<p>Super duper great gt safe route map</p>
+			Start:<br>
+  			<input type="text" name="start" id="start"/>
+  			<button type="button" id="loadLocation">Use Current Location</button><br>
+  			Destination:<br>
+  			<input type="text" name="end" id="end"/>
+  			<button type="button" id="search">Find Route</button><br>
+  			Time:<br>
+  			<input type="text" name="time" id="time" placeholder="hh:mm (24 hour time)" />
+  			<button type="button" id="reloadMap">Reload With Custom Time</button>
+  			<button type="button" id="loadTime">Use Current Time</button>
+		</div>
+	    <!-- <div id="floating-panel">
 			<button onclick="toggleHeatmap()">Toggle Heatmap</button>
 			<button onclick="changeGradient()">Change gradient</button>
 			<button onclick="changeRadius()">Change radius</button>
 			<button onclick="changeOpacity()">Change opacity</button>
-	    </div>
+	    </div> -->
 	    <div id="map"></div>
 	    <script>
-
-		// This example requires the Visualization library. Include the libraries=visualization
-		// parameter when you first load the API. For example:
-		// <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyARX8uH1Dy_8KpRn2pNzRkXJZdN9hMUSlY&libraries=visualization">
-
-		var map, heatmap;
+		var map, heatmap, directionsDisplay, directionsService, geocoder, crimeTimeArray, crimeArray, currentTime, mapBounds;
 
 		function initMap() {
 			map = new google.maps.Map(document.getElementById('map'), {
-			  zoom: 13,
-			  center: {lat: 37.775, lng: -122.434},
-			  mapTypeId: 'satellite'
+			  zoom: 17,
+			  center: {lat: 33.7800134336999, lng: -84.3995025802999},
+			  mapTypeId: 'roadmap'
 			});
+			mapBounds = new google.maps.LatLngBounds();
+			directionsService = new google.maps.DirectionsService();
+			directionsDisplay = new google.maps.DirectionsRenderer();
+			geocoder = new google.maps.Geocoder();
+			directionsDisplay.setMap(map);
+			currentTime = moment().format("hh:mm");
+			$("#time").val(currentTime);
+
+			crimeTimeArray = [];
+			$.ajax({
+			    url: "crimelog.csv",
+			    async: false,
+			    success: function (csvd) {
+			        data = $.csv.toArrays(csvd);
+			        var counter = 0;
+			        $.each(data, function(index, value) {
+			        	if (value.length > 1) {
+				        	lat = value[15].replace(/[^0-9\-\.]/g, '');
+				        	lng = value[16].replace(/[^0-9\-\.]/g, '');
+				        	if($.isNumeric(lat) && $.isNumeric(lng)) {
+					    		point = new google.maps.LatLng(lat, lng);
+				        		time = value[2].replace(/[^0-9\:]/g, '');
+				        		if (time.length > 0) {
+					        		entry = { _point: point, _time:time};
+					        		mapBounds.extend(point);
+						    		crimeTimeArray.push(entry);
+						    		//crimeArray.push(point);
+				        		}
+				        	}
+			        	}
+			        });
+			    },
+			    dataType: "text",
+			});
+			map.fitBounds(mapBounds);
 
 			heatmap = new google.maps.visualization.HeatmapLayer({
 			  data: getPoints(),
 			  map: map
 			});
+			heatmap.set('radius', 50);
+
+			if (navigator.geolocation) {
+			     navigator.geolocation.getCurrentPosition(function (position) {
+			        initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+			        map.setCenter(initialLocation);
+			        codeAddress(initialLocation);
+		     	});
+			}
 		}
 
 		function toggleHeatmap() {
@@ -109,61 +163,137 @@
 
 		// Heatmap data: 500 Points
 		function getPoints() {
-			var crimeArray = [];
-			$.ajax({
-			    url: "crimelog.csv",
-			    async: false,
-			    success: function (csvd) {
-			        data = $.csv.toArrays(csvd);
-			        //console.log(data.toString());
-			        console.log(data.length);
-			        var counter = 0;
-			        $.each(data, function(index, value) {
-			        	if (value.length > 1) {
-				        	lat = value[15].replace(/[^0-9\-\.]/g, '');
-				        	lng = value[16].replace(/[^0-9\-\.]/g, '');
-				        	if($.isNumeric(lat) && $.isNumeric(lng)) {
-					    		point = new google.maps.LatLng(lat, lng);
-					    		crimeArray.push(point);
-					        	counter = counter + 1;
-					        	console.log(lat);
-					        	console.log(lng);
-					        	console.log("-------------");
-				        	}
-			        	}
-			        });
-			        console.log(counter);
-			       	// console.log($.type(data));
-			    },
-			    dataType: "text",
-			    complete: function () {
-			        // call a function on complete
-			    }
+			crimeArray = [];
+
+			//currentTime = moment().format("hh:mm:ss");
+			curTimeHour = currentTime.split(":")[0];
+			$.each(crimeTimeArray, function(index, value) {
+				crimeTime = value['_time'];
+				crimeTimeHour = crimeTime.split(":")[0];
+				dif = Math.abs(crimeTimeHour - curTimeHour);
+				if (dif < 3 || dif > 21) {
+					crimeArray.push(value['_point']);
+				}
 			});
 			return crimeArray;
-			// return [
-	  //         	new google.maps.LatLng(37.782551, -122.445368),
-	  //         	new google.maps.LatLng(37.782745, -122.444586),
-	  //         	new google.maps.LatLng(37.782842, -122.443688),
-	  //         	new google.maps.LatLng(37.782919, -122.442815)
-	  //       ]
-		 //    var reader = new FileReader();
-		 //    reader.readAsText("crimelog.csv");
-		 //    reader.onload = function(event){
-		 //    	var csv = event.target.result;
-		 //    	var data = $.csv.toArrays(csv);
-		 //    	var html = '';
-			//     for(var row in data) {
-			//      	html += '<tr>\r\n';
-			//       	for(var item in data[row]) {
-			//         	html += '<td>' + data[row][item] + '</td>\r\n';
-			//       	}
-			//       	html += '</tr>\r\n';
-			//     }
-		 //    	$('#contents').html(html);
-			// };
-			// reader.onerror = function(){ alert('Unable to read ' + file.fileName); };
 		}
+
+		function codeAddress(latLng) {
+		    geocoder.geocode( { 'location': latLng}, function(results, status) {
+		      	if (status == 'OK') {
+		      		if (results[0]) {
+		        		$("#start").val(results[0].formatted_address);
+		      		}
+		      	} else {
+		        	alert('Geocode was not successful for the following reason: ' + status);
+		      	}
+		    });
+	  	}
+
+	  	function findBestPath(results) {
+	  		var polyline = new google.maps.Polyline({
+			  	path: [],
+			  	strokeColor: '#FF0000',
+			  	strokeWeight: 3
+			});
+			var bounds = new google.maps.LatLngBounds();
+			var routeNumber = 0;
+			var minCrimeHits = 100000;
+			var bestRouteIndex = 0;
+			console.log("results length");
+			console.log(results.routes.length);
+			$.each(results.routes, function(index, value) {
+				var crimeHits = 0;
+				var legs = value.legs;
+				for (i=0;i<legs.length;i++) {
+				  	var steps = legs[i].steps;
+				  	for (j=0;j<steps.length;j++) {
+				    	var nextSegment = steps[j].path;
+				    	for (k=0;k<nextSegment.length;k++) {
+				      		polyline.getPath().push(nextSegment[k]);
+				      		bounds.extend(nextSegment[k]);
+				    	}
+				  	}
+				}
+				$.each(crimeArray, function(index, value) {
+					if (google.maps.geometry.poly.isLocationOnEdge(value, polyline, .00015)) {
+	    				console.log("got a hit");
+	    				crimeHits = crimeHits + 1;
+	  				}
+				})
+				console.log("crime hits " + crimeHits)
+				if (crimeHits < minCrimeHits) {
+					minCrimeHits = crimeHits;
+					bestRouteIndex = routeNumber;
+				}
+				routeNumber = routeNumber + 1;
+			});
+			console.log($.type(results.routes));
+			return bestRouteIndex;
+	  	}
+
+		$("#search").click(function() {
+			var start = document.getElementById('start').value;
+		  	var end = document.getElementById('end').value;
+		  	if (!start.toLowerCase().indexOf("georgia tech") >= 0) {
+		  		start = "Georgia Tech, " + start;
+		  	}
+		  	if (!end.toLowerCase().indexOf("georgia tech") >= 0) {
+		  		end = "Georgia Tech, " + end;
+		  	}
+		  	var request = {
+		    	origin: start,
+		    	destination: end,
+		    	provideRouteAlternatives : true,
+		    	travelMode: 'WALKING'
+		  	};
+		  	directionsService.route(request, function(results, status) {
+		    	if (status == 'OK') {
+		    		bestRoute = findBestPath(results);
+		    		console.log(bestRoute);
+		    		directionsDisplay.setMap(null);
+		    		directionsDisplay = new google.maps.DirectionsRenderer({
+                    	map: map,
+                    	directions: results,
+                    	routeIndex: bestRoute
+                	});
+		      		// directionsDisplay.setDirections(bestRoute);
+		    	}
+		  	});
+		});
+
+		$("#loadLocation").click(function() {
+			if (navigator.geolocation) {
+			     navigator.geolocation.getCurrentPosition(function (position) {
+			        initialLocation = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+			        map.setCenter(initialLocation);
+			        codeAddress(initialLocation);
+		     	});
+			}
+		});
+
+		$("#loadTime").click(function() {
+			currentTime = moment().format("hh:mm");
+			$("#time").val(currentTime);
+			$("#reloadMap").click();
+		});
+
+		$("#reloadMap").click(function() {
+			currentTime = $("#time").val();
+			if(!moment(currentTime,"hh:mm", true).isValid()) {
+				currentTime = moment().format("hh:mm");
+				$("#time").val(currentTime);
+			}
+			if(heatmap) {
+				heatmap.setMap(null);
+			}
+			heatmap = new google.maps.visualization.HeatmapLayer({
+			    data: getPoints(),
+			    map: map
+			});
+			heatmap.set('radius', 50);
+		});
+
 	    </script>
 	    <script async defer
 	        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyARX8uH1Dy_8KpRn2pNzRkXJZdN9hMUSlY&libraries=visualization&callback=initMap">
