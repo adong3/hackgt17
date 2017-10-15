@@ -21,6 +21,7 @@
 	      /* Optional: Makes the sample page fill the window. */
 	      html, body {
 	        height: 100%;
+			  background-color: papayawhip;
 	        /*margin: 0;*/
 	        /*padding: 0;*/
 	      }
@@ -51,29 +52,30 @@
 	<body>
 		<div class="row">
 			<!-- <p>Super duper great gt safe route map</p> -->
+			<header><h2 style="font-family: 'Al Bayan'; color: darkblue; text-align: center; font-size: xx-large">GT Crime Map</h2></header>
 			<div class="col-sm-6">
 
 				Start:<br>
 				<div class="row">
-		  			<input class="form-control" type="text" name="start" id="start"/>
-		  			<button class="btn btn-primary" type="button" id="loadLocation">Use Current Location</button>
+		  			<input class="form-control" style="width: 98%; margin-left: 10px;" type="text" name="start" id="start"/>
+		  			<button class="btn btn-primary" style="width: 98%; margin-left: 10px;" type="button" id="loadLocation">Use Current Location</button>
 				</div>
 
 	  			Destination:<br>
 				<div class="row">
-		  			<input class="form-control" type="text" name="end" id="end"/>
-		  			<button class="btn btn-primary" type="button" id="search">Find Route</button><br>
+		  			<input class="form-control" style="width: 98%; margin-left: 10px;" type="text" name="end" id="end"/>
+		  			<button class="btn btn-primary" style="width: 98%; margin-left: 10px" type="button" id="search">Find Route</button><br>
 				</div>
 			</div>
 
 			<div class="col-sm-6">
 				Time:<br>
 	  			<div class="row">
-	  				<input class="form-control" placeholder="hh:mm (24 hour format)" type="text" name="time" id="time"/>
+	  				<input class="form-control" placeholder="hh:mm (24 hour format)" style="width: 98%; margin-left: 3px;" type="text" name="time" id="time"/>
 	  			</div>
 	  			<div class="row">
-		  			<button class="btn btn-primary" type="button" id="reloadMap">Reload With Custom Time</button>
-		  			<button class="btn btn-primary" type="button" id="loadTime">Use Current Time</button>
+		  			<button class="btn btn-primary btn-block" style="width:98%; margin-left: 3px" type="button" id="reloadMap">Reload With Custom Time</button>
+		  			<button class="btn btn-primary" style="width:98%; margin-top: 3px; margin-left: 3px" type="button" id="loadTime">Use Current Time</button>
 	  			</div>
 
 			</div>
@@ -81,6 +83,7 @@
 
   			</div>
 		</div>
+		<br>
 	    <!-- <div id="floating-panel">
 			<button onclick="toggleHeatmap()">Toggle Heatmap</button>
 			<button onclick="changeGradient()">Change gradient</button>
